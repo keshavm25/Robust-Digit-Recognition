@@ -1,176 +1,88 @@
-# 🎙️ Robust Spoken Digit Recognition
+# Spoken Digit Recognition (Audio Classification)
 
-### EE708 Term Project | Deep Learning | Audio Classification
+A PyTorch pipeline that classifies spoken digits (0–9) from raw audio clips using Mel-spectrogram features and a convolutional neural network. Built for the **EE708 Digit Recognition** Kaggle competition.
 
-A deep-learning pipeline for **spoken digit recognition (0–9)** from `.wav` audio recordings using **PyTorch, TorchAudio, Mel Spectrograms, SpecAugment, and a custom CNN architecture**.
+## Overview
 
----
+The model converts raw `.wav` audio into log-mel spectrograms and trains a CNN to predict the spoken digit. It reaches a **best validation Macro F1 of 0.9806**.
 
-## 📌 Project Overview
+## Pipeline
 
-This project implements an end-to-end audio classification system for recognizing **spoken digits (0–9)** from audio recordings. The model uses standardized audio preprocessing, **Mel Spectrogram** feature extraction, **SpecAugment**, and a custom **Convolutional Neural Network (CNN)** for classification.
+1. **Audio loading & preprocessing** — Load `.wav` files with `torchaudio`, resample to 16 kHz, downmix to mono, and pad/truncate to a fixed length of 16000 samples (1 second).
+2. **Feature extraction** — Convert waveforms to 64-band Mel-spectrograms, then to log scale (dB).
+3. **Data augmentation** — Apply SpecAugment (frequency masking + time masking) on training data only, to improve robustness to speaker/recording variation.
+4. **Model** — A 4-block CNN (`RobustAudioCNN`) with Conv2D + BatchNorm + ReLU + MaxPool layers, followed by adaptive average pooling and a fully connected classifier head with dropout.
+5. **Training** — Trained for 15 epochs with Adam optimizer and cross-entropy loss, tracking validation Macro F1 and checkpointing the best model.
+6. **Inference & submission** — Loads the best checkpoint, runs inference on the test set, and writes predictions to `submission.csv`.
 
-The primary evaluation metric is **Macro F1 Score**.
+## Model Architecture
 
----
+\```
+Input (1 x 64 x T mel-spectrogram)
+ → Conv2D(32) → BatchNorm → ReLU → MaxPool
+ → Conv2D(64) → BatchNorm → ReLU → MaxPool
+ → Conv2D(128) → BatchNorm → ReLU → MaxPool
+ → Conv2D(256) → BatchNorm → ReLU
+ → AdaptiveAvgPool2d(1x1)
+ → Flatten → Dropout(0.5) → Linear(256→128) → ReLU → Dropout(0.3) → Linear(128→10)
+\```
 
-## 🎯 Objective
+## Results
 
-Build a robust deep-learning model capable of classifying **spoken digits (0–9)** from `.wav` recordings while maximizing the **Macro F1 score**.
+| Metric | Value |
+|---|---|
+| Best Validation Macro F1 | **0.9806** |
+| Epochs | 15 |
+| Batch size | 32 |
+| Learning rate | 0.001 |
 
----
+Training progress (final epochs):
 
-## 🛠️ Technologies Used
+| Epoch | Train Loss | Val Loss | Val Macro F1 |
+|---|---|---|---|
+| 11 | 0.3541 | 0.0609 | 0.9806 (best) |
+| 12 | 0.3283 | 0.0650 | 0.9778 |
+| 13 | 0.3183 | 0.0644 | 0.9771 |
+| 14 | 0.3104 | 0.0645 | 0.9772 |
+| 15 | 0.3038 | 0.0976 | 0.9658 |
 
-- **Python**
-- **PyTorch**
-- **TorchAudio**
-- **Scikit-learn**
-- **Pandas**
-- **NumPy**
-- **CUDA / GPU**
-- **Kaggle**
+## Requirements
 
----
+\```
+torch
+torchaudio
+pandas
+numpy
+scikit-learn
+\```
 
-## 🔄 End-to-End Pipeline
+## Usage
 
-```text
-Raw .WAV Audio
-      ↓
-Audio Loading
-      ↓
-Resampling → 16 kHz
-      ↓
-Stereo → Mono
-      ↓
-Pad / Truncate → 1 Second
-      ↓
-Mel Spectrogram
-      ↓
-Amplitude-to-dB Conversion
-      ↓
-SpecAugment
-      ↓
-Custom CNN
-      ↓
-10-Class Digit Prediction
-      ↓
-Macro F1 Evaluation
-      ↓
-Best Model Checkpoint
-      ↓
-Test Inference
-      ↓
-submission.csv
+1. Place the competition data under `BASE_PATH` (expects `train.csv`, `train_audio/train_audio/`, `test_audio/test_audio/`).
+2. Run the notebook top to bottom. It will:
+   - Split `train.csv` into 80/20 train/validation (stratified by label).
+   - Train the CNN and save the best checkpoint to `best_model.pth`.
+   - Run inference on the test audio and write `submission.csv` with columns `id, label`.
 
+## Hyperparameters
 
-Mel Spectrogram
-       │
-       ├── Frequency Masking
-       │
-       └── Time Masking
-              ↓
-      Augmented Spectrogram
+| Name | Value |
+|---|---|
+| Sample rate | 16000 Hz |
+| Max audio length | 16000 samples |
+| Mel bands | 64 |
+| Batch size | 32 |
+| Epochs | 15 |
+| Learning rate | 0.001 |
 
-Input Mel Spectrogram
-        ↓
-Conv2D (1 → 32)
-BatchNorm + ReLU
-MaxPooling
-        ↓
-Conv2D (32 → 64)
-BatchNorm + ReLU
-MaxPooling
-        ↓
-Conv2D (64 → 128)
-BatchNorm + ReLU
-MaxPooling
-        ↓
-Conv2D (128 → 256)
-BatchNorm + ReLU
-        ↓
-Adaptive Average Pooling
-        ↓
-Flatten
-        ↓
-Dropout (0.5)
-        ↓
-Linear (256 → 128)
-ReLU
-        ↓
-Dropout (0.3)
-        ↓
-Linear (128 → 10)
-        ↓
-Digit Prediction
+## File Structure
 
+\```
+├── digit-recognition-2.ipynb   # Full training + inference pipeline
+├── best_model.pth              # Saved best model weights (generated)
+└── submission.csv              # Test predictions (generated)
+\```
 
+## License
 
-Epoch 01 → Macro F1: 0.6026
-Epoch 02 → Macro F1: 0.7613
-Epoch 03 → Macro F1: 0.8786
-Epoch 04 → Macro F1: 0.9326
-Epoch 05 → Macro F1: 0.9181
-Epoch 06 → Macro F1: 0.9630
-Epoch 07 → Macro F1: 0.9414
-Epoch 08 → Macro F1: 0.9661
-Epoch 09 → Macro F1: 0.9572
-Epoch 10 → Macro F1: 0.9675
-Epoch 11 → Macro F1: 0.9806  ← Best
-Epoch 12 → Macro F1: 0.9778
-Epoch 13 → Macro F1: 0.9771
-Epoch 14 → Macro F1: 0.9772
-Epoch 15 → Macro F1: 0.9658
-
-
-
-
-digit-recognition/
-│
-├── digit-recognition-2.ipynb
-├── README.md
-├── submission.csv
-│
-└── results/
-    └── best_model.pth
-
-
-git clone https://github.com/<your-username>/digit-recognition.git
-cd digit-recognition
-
-pip install torch torchaudio pandas numpy scikit-learn
-
-jupyter notebook digit-recognition-2.ipynb
-
-
-BASE_PATH = "/kaggle/input/competitions/digitrecognition-ee708"
-
-
-
-| Component              | Configuration                |
-| ---------------------- | ---------------------------- |
-| Input                  | `.wav` audio                 |
-| Sampling Rate          | **16 kHz**                   |
-| Input Duration         | **1 second**                 |
-| Feature Representation | **Mel Spectrogram**          |
-| Mel Bins               | **64**                       |
-| Augmentation           | **Frequency + Time Masking** |
-| Backbone               | **Custom CNN**               |
-| Normalization          | **Batch Normalization**      |
-| Regularization         | **Dropout + SpecAugment**    |
-| Optimizer              | **Adam**                     |
-| Learning Rate          | **0.001**                    |
-| Loss                   | **Cross Entropy**            |
-| Classes                | **10**                       |
-| Evaluation             | **Macro F1**                 |
-| Best Validation F1     | **0.9806**                   |
-
-
-
-best_model.pth
-
-submission.csv
-
-id,label
-
+Specify a license of your choice (e.g., MIT) if you plan to make this repository public.
