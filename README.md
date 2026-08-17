@@ -1,4 +1,4 @@
-# Spoken Digit Recognition (Audio Classification)
+# Robust Digit Recognition (Audio Classification)
 
 A PyTorch pipeline that classifies spoken digits (0–9) from short audio recordings. Raw waveforms are converted into log-mel spectrograms and fed into a custom convolutional neural network (`RobustAudioCNN`). The project was built for the **EE708 Digit Recognition** Kaggle competition and reaches a **best validation Macro F1 score of 0.9806**.
 
